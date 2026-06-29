@@ -1,208 +1,253 @@
-'use client';
+import benchmark from '../data/benchmark-results.json';
+import { CodeBlock } from './CodeBlock';
+import { CopyButton } from './CopyButton';
+import { HeroCanvas } from './HeroCanvas';
+import { InteractiveBenchmark } from './InteractiveBenchmark';
 
-import { motion } from 'framer-motion';
-import { useEffect, useRef, useState } from 'react';
-import { gsap } from 'gsap';
-import { FaGithub } from 'react-icons/fa';
-import { CodeDemo } from './CodeDemo';
-import { InstallGuide } from './InstallGuide';
+const installCommand = 'pnpm add @atom-universe/use-web-worker';
+
+const quickStart = `import { useWebWorkerFn } from '@atom-universe/use-web-worker';
+
+function App() {
+  const [workerFn, status] = useWebWorkerFn(
+    (items: number[]) => items.reduce((total, item) => total + item, 0)
+  );
+
+  async function calculate() {
+    const result = await workerFn([1, 2, 3]);
+    console.log(result);
+  }
+
+  return <button onClick={calculate}>Run in worker: {status}</button>;
+}`;
+
+const progressExample = `export function computeMandelbrot(
+  width: number,
+  height: number,
+  maxIterations: number,
+  workerContext: Worker
+) {
+  workerContext.postMessage(['PROGRESS', { percent: 25 }]);
+  return new Array(width * height).fill(maxIterations);
+}`;
+
+const sections = [
+  { href: '#install', label: 'Install' },
+  { href: '#benchmark', label: 'Benchmark' },
+  { href: '#api', label: 'API' },
+  { href: '#examples', label: 'Examples' },
+];
+
+const statusRows = [
+  ['PENDING', '4', 'Idle or reset state'],
+  ['RUNNING', '3', 'Worker is executing'],
+  ['SUCCESS', '0', 'Last run completed'],
+  ['ERROR', '1', 'Worker reported an error'],
+  ['TIMEOUT', '2', 'Timeout guard fired'],
+];
 
 export function Hero() {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [isInstallOpen, setIsInstallOpen] = useState(false);
-  const codeDemoRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-
-    const particles: Array<{
-      x: number;
-      y: number;
-      vx: number;
-      vy: number;
-      size: number;
-      opacity: number;
-    }> = [];
-
-    // Create particles
-    for (let i = 0; i < 100; i++) {
-      particles.push({
-        x: Math.random() * canvas.width,
-        y: Math.random() * canvas.height,
-        vx: (Math.random() - 0.5) * 0.5,
-        vy: (Math.random() - 0.5) * 0.5,
-        size: Math.random() * 2 + 1,
-        opacity: Math.random() * 0.5 + 0.2,
-      });
-    }
-
-    function animate() {
-      if (!ctx || !canvas) return;
-
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      particles.forEach(particle => {
-        particle.x += particle.vx;
-        particle.y += particle.vy;
-
-        if (particle.x < 0 || particle.x > canvas.width) particle.vx *= -1;
-        if (particle.y < 0 || particle.y > canvas.height) particle.vy *= -1;
-
-        ctx.beginPath();
-        ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(139, 92, 246, ${particle.opacity})`;
-        ctx.fill();
-      });
-
-      // Draw connections
-      particles.forEach((particle, i) => {
-        particles.slice(i + 1).forEach(otherParticle => {
-          const dx = particle.x - otherParticle.x;
-          const dy = particle.y - otherParticle.y;
-          const distance = Math.sqrt(dx * dx + dy * dy);
-
-          if (distance < 100) {
-            ctx.beginPath();
-            ctx.moveTo(particle.x, particle.y);
-            ctx.lineTo(otherParticle.x, otherParticle.y);
-            ctx.strokeStyle = `rgba(139, 92, 246, ${0.1 - distance / 1000})`;
-            ctx.stroke();
-          }
-        });
-      });
-
-      requestAnimationFrame(animate);
-    }
-
-    animate();
-
-    const handleResize = () => {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
-    };
-
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
-  // Prepare collapsed code demo on mount
-  useEffect(() => {
-    const container = codeDemoRef.current;
-    if (!container) return;
-    gsap.set(container, { height: 0, overflow: 'hidden' });
-  }, []);
-
-  const openCodeDemo = () => {
-    const container = codeDemoRef.current;
-    if (!container) return;
-    gsap.to(container, { height: 'auto', duration: 0.6, ease: 'power2.out' });
-  };
-
-  const toggleInstallPanel = () => {
-    setIsInstallOpen(!isInstallOpen);
-  };
+  const summary = benchmark.summary;
 
   return (
-    <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
-      {/* Top-right GitHub button */}
+    <main className="page-shell">
+      <header className="topbar">
+        <a className="brand" href="#top" aria-label="useWebWorker home">
+          <img src="/uww-icon.svg" alt="" />
+          <span>useWebWorker</span>
+        </a>
+        <nav aria-label="Page sections">
+          {sections.map(section => (
+            <a key={section.href} href={section.href}>
+              {section.label}
+            </a>
+          ))}
+        </nav>
+        <a className="github-link" href="https://github.com/atom-universe/useWebWorker">
+          GitHub
+        </a>
+      </header>
 
-      {/* Animated background */}
-      <canvas
-        ref={canvasRef}
-        className="absolute inset-0 pointer-events-none"
-        style={{ zIndex: 0 }}
-      />
-
-      {/* Content */}
-      <div className="relative z-10 max-w-7xl mx-auto px-6 py-20">
-        <div className="grid lg:grid-cols-2 items-center space-y-12 lg:space-y-0 lg:space-x-12">
-          {/* Left side - Text content */}
-          <motion.div
-            initial={{ opacity: 0, x: -50 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.8 }}
-            className="text-center lg:text-left"
-          >
-            <motion.h1
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2, duration: 0.8 }}
-              className="text-5xl lg:text-7xl font-bold mb-6"
-            >
-              <span className="gradient-text">useWebWorker</span>
-            </motion.h1>
-
-            {/* Background icon below title */}
-            <motion.div
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 0.05, scale: 1 }}
-              transition={{ delay: 0.8, duration: 1.2 }}
-              className="absolute left-1/2 transform -translate-x-1/2 -z-10"
-              style={{
-                top: 'calc(50% - 100px)',
-                width: '300px',
-                height: '300px',
-                backgroundImage: 'url(/uww-icon.svg)',
-                backgroundSize: 'contain',
-                backgroundRepeat: 'no-repeat',
-                backgroundPosition: 'center',
-                filter: 'blur(3px)',
-              }}
-            />
-
-            <motion.p
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.4, duration: 0.8 }}
-              className="text-xl lg:text-2xl text-gray-300 mb-8 leading-relaxed"
-            >
-              A powerful React hook for easy Web Worker integration with{' '}
-              <span className="text-purple-400">TypeScript support</span>,{' '}
-              <span className="text-green-400">automatic cleanup</span>, and{' '}
-              <span className="text-blue-400">comprehensive error handling</span>.
-            </motion.p>
-
-            <InstallGuide isOpen={isInstallOpen} onToggle={toggleInstallPanel} />
-
-            {/* Stats */}
-            {/* <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.8, duration: 0.8 }}
-              className="grid grid-cols-3 gap-6 mt-12"
-            >
-              <div className="text-center lg:text-left">
-                <div className="text-2xl font-bold gradient-text">1.9KB</div>
-                <div className="text-sm text-gray-400">Minified</div>
-              </div>
-              <div className="text-center lg:text-left">
-                <div className="text-2xl font-bold gradient-text">100%</div>
-                <div className="text-sm text-gray-400">TypeScript</div>
-              </div>
-              <div className="text-center lg:text-left">
-                <div className="text-2xl font-bold gradient-text">0</div>
-                <div className="text-sm text-gray-400">Dependencies</div>
-              </div>
-            </motion.div> */}
-          </motion.div>
-
-          {/* Right side - Code demo */}
-          <motion.div
-            initial={{ opacity: 0, x: 50 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.4, duration: 0.8 }}
-          >
-            <CodeDemo />
-          </motion.div>
+      <section id="top" className="hero-section">
+        <div className="hero-copy">
+          <p className="eyebrow">React hooks for Web Workers</p>
+          <h1>Move CPU-heavy work out of React's render lane.</h1>
+          <p className="lead">
+            useWebWorker gives React apps a small function-style API for running expensive work in a
+            Web Worker, with TypeScript inference, status tracking, timeout handling, and automatic
+            cleanup.
+          </p>
+          <div className="hero-actions" id="install">
+            <code>{installCommand}</code>
+            <CopyButton text={installCommand} />
+          </div>
+          <div className="metric-row" aria-label="Package highlights">
+            <div>
+              <strong>1.86 KB</strong>
+              <span>minified bundle</span>
+            </div>
+            <div>
+              <strong>0 deps</strong>
+              <span>React peer only</span>
+            </div>
+            <div>
+              <strong>TS first</strong>
+              <span>typed hook return</span>
+            </div>
+          </div>
         </div>
-      </div>
-    </section>
+
+        <div className="hero-visual">
+          <HeroCanvas />
+          <CodeBlock code={quickStart} title="quick-start.tsx" />
+        </div>
+      </section>
+
+      <section className="section-band">
+        <div className="section-heading">
+          <p className="eyebrow">Why workers</p>
+          <h2>Workers are not about making math faster. They keep the UI responsive.</h2>
+        </div>
+        <div className="feature-grid">
+          <article>
+            <h3>Function-like calls</h3>
+            <p>
+              Call a worker function and await the result without maintaining worker files by hand.
+            </p>
+          </article>
+          <article>
+            <h3>Progress messages</h3>
+            <p>Use the injected worker context to stream progress updates back to React state.</p>
+          </article>
+          <article>
+            <h3>Lifecycle cleanup</h3>
+            <p>The hook terminates generated workers on completion, timeout, error, or unmount.</p>
+          </article>
+        </div>
+      </section>
+
+      <section id="benchmark" className="section-band">
+        <div className="section-heading">
+          <p className="eyebrow">Benchmark</p>
+          <h2>Measured responsiveness, not just total runtime.</h2>
+          <p>
+            The reproducible script runs a Mandelbrot-style workload on the main thread and in a
+            worker thread. Total runtime can be similar, but the worker path keeps frame scheduling
+            available for the page.
+          </p>
+        </div>
+
+        <InteractiveBenchmark />
+
+        <div className="section-heading benchmark-script-heading">
+          <p className="eyebrow">Reproducible script result</p>
+          <h3>Same workload, measured from a repeatable local script.</h3>
+        </div>
+
+        <div className="benchmark-grid">
+          <div className="benchmark-card highlight">
+            <span>Max timer gap reduction</span>
+            <strong>{summary.blockingReductionPercent}%</strong>
+            <p>
+              Lower timer gaps mean the main thread has more room to paint and respond to input.
+            </p>
+          </div>
+          <div className="benchmark-card">
+            <span>Main thread gap</span>
+            <strong>{summary.mainThreadMaxTimerGapMs} ms</strong>
+            <p>{summary.mainThreadMissedFramesAt60hz} missed 60Hz frames in the benchmark run.</p>
+          </div>
+          <div className="benchmark-card">
+            <span>Worker path gap</span>
+            <strong>{summary.workerMaxTimerGapMs} ms</strong>
+            <p>{summary.workerMissedFramesAt60hz} missed 60Hz frames in the benchmark run.</p>
+          </div>
+        </div>
+
+        <div className="benchmark-table" aria-label="Benchmark results">
+          <div>
+            <span>Scenario</span>
+            <span>Total time</span>
+            <span>Max timer gap</span>
+            <span>Missed frames</span>
+          </div>
+          <div>
+            <span>Main thread</span>
+            <span>{summary.mainThreadDurationMs} ms</span>
+            <span>{summary.mainThreadMaxTimerGapMs} ms</span>
+            <span>{summary.mainThreadMissedFramesAt60hz}</span>
+          </div>
+          <div>
+            <span>Worker thread</span>
+            <span>{summary.workerDurationMs} ms</span>
+            <span>{summary.workerMaxTimerGapMs} ms</span>
+            <span>{summary.workerMissedFramesAt60hz}</span>
+          </div>
+        </div>
+
+        <p className="note">
+          Generated by <code>pnpm benchmark</code> on {benchmark.environment.runtime}. Checksum
+          matched: {summary.checksumMatched ? 'yes' : 'no'}.
+        </p>
+      </section>
+
+      <section id="api" className="section-band">
+        <div className="section-heading">
+          <p className="eyebrow">API quick reference</p>
+          <h2>The current API surface is intentionally small.</h2>
+        </div>
+        <div className="api-grid">
+          <article>
+            <h3>useWebWorkerFn</h3>
+            <CodeBlock
+              title="api.ts"
+              code={`const [run, status, terminate] = useWebWorkerFn(fn, {
+  dependencies,
+  localDependencies,
+  timeout,
+  onError,
+  onMessage,
+});`}
+            />
+          </article>
+          <article>
+            <h3>WorkerStatusType</h3>
+            <div className="status-table">
+              {statusRows.map(([name, value, description]) => (
+                <div key={name}>
+                  <code>{name}</code>
+                  <span>{value}</span>
+                  <p>{description}</p>
+                </div>
+              ))}
+            </div>
+            <p className="api-note">
+              <code>localDependencies</code> accepts functions that are stringified into the
+              generated worker. <code>onMessage</code> receives custom worker messages.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section id="examples" className="section-band">
+        <div className="section-heading">
+          <p className="eyebrow">Examples</p>
+          <h2>Progress messages are plain worker messages.</h2>
+        </div>
+        <CodeBlock code={progressExample} title="progress-worker.ts" className="full-width" />
+      </section>
+
+      <section className="section-band todo-band">
+        <div>
+          <p className="eyebrow">Known TODO</p>
+          <h2>Runtime follow-up is tracked separately.</h2>
+        </div>
+        <p>
+          The documentation now reflects the current API. A later core pass should address blob URL
+          cache keys, synchronous concurrent calls, cancellation semantics, and behavior-level hook
+          tests.
+        </p>
+      </section>
+    </main>
   );
 }

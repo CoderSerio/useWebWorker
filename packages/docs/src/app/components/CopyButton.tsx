@@ -1,3 +1,5 @@
+'use client';
+
 import clipboard from 'clipboard-js';
 import { useCallback, useState } from 'react';
 import { FaCheck, FaCopy } from 'react-icons/fa';
