@@ -1,28 +1,25 @@
 <div align="center">
   <img src="assets/uww_128.svg" alt="useWebWorker Logo" width="64" height="64" />
-  <h1>useWebWorker</h1>
+  <h1>use-web-worker</h1>
   <p>
     <a href="README.md">English</a> | <strong>中文</strong>
   </p>
-  <p>一个功能强大的 React Hook，用于简化 Web Worker 集成，支持 TypeScript，自动清理和全面的错误处理。</p>
-  
-  [![NPM version](https://img.shields.io/npm/v/@atom-universe/use-web-worker.svg?style=flat)](https://npmjs.com/package/@atom-universe/use-web-worker)
-  [![NPM downloads](http://img.shields.io/npm/dm/@atom-universe/use-web-worker.svg?style=flat)](https://npmjs.com/package/@atom-universe/use-web-worker)
-  
+  <p>用于在 Web Worker 中运行 CPU 密集函数的 React Hooks，支持 TypeScript、状态追踪、超时处理和自动清理。</p>
+
+[![NPM version](https://img.shields.io/npm/v/@atom-universe/use-web-worker.svg?style=flat)](https://npmjs.com/package/@atom-universe/use-web-worker)
+[![NPM downloads](http://img.shields.io/npm/dm/@atom-universe/use-web-worker.svg?style=flat)](https://npmjs.com/package/@atom-universe/use-web-worker)
+
   <p>
-    📖 更多信息可以通过阅读 👉
-    <strong> <a href="https://use-web-worker-docs.vercel.app/">文档</a></strong> 👈
-    获取
-    <strong>
+    <strong><a href="https://use-web-worker-docs.vercel.app/">文档</a></strong>
   </p>
-  
 </div>
 
 ## 快速开始
 
-- **零依赖, 轻量级** - 纯 React hooks，无外部依赖
-- **函数式 API** - 像调用普通函数一样使用 Web Workers
-- **自动清理** - 组件卸载时自动终止 Workers
+- **函数式 API** - 像调用异步函数一样调用 worker 任务。
+- **保持 UI 响应** - 将 CPU 密集任务移出主线程。
+- **TypeScript 优先** - 根据 worker 函数推导调用参数和返回值。
+- **生命周期辅助** - 提供状态、超时、错误处理和自动清理。
 
 ```bash
 npm install @atom-universe/use-web-worker
@@ -54,7 +51,7 @@ function App() {
 
 ### useWebWorkerFn
 
-创建一个 Web Worker 函数的 Hook，提供执行方式。
+根据函数创建生成式 Web Worker，并返回执行函数。
 
 ```tsx
 const [workerFn, workerStatus, workerTerminate] = useWebWorkerFn(
@@ -63,42 +60,77 @@ const [workerFn, workerStatus, workerTerminate] = useWebWorkerFn(
 );
 ```
 
-#### 参数
-
-- `fn: T` - 在 Web Worker 中运行的函数
-- `options?: UseWebWorkerFnOptions` - 配置选项
-
 #### 选项
 
 ```tsx
 interface UseWebWorkerFnOptions {
-  dependencies?: string[]; // 外部脚本 URL
-  localDependencies?: string[]; // 本地脚本路径
-  timeout?: number; // 超时时间（毫秒）
-  onError?: (error: Error) => void; // 错误回调
+  timeout?: number;
+  dependencies?: string[]; // 通过 importScripts() 加载的外部脚本
+  localDependencies?: ((...args: unknown[]) => unknown)[]; // 被字符串化写入 worker 的辅助函数
+  onError?: (error: Error) => void;
+  onMessage?: (message: any) => void; // worker 主动发出的自定义消息
 }
 ```
 
 #### 返回值
 
-- `workerFn: (...args: Parameters<T>) => Promise<ReturnType<T>>` - 执行 worker 的函数
-- `workerStatus: WebWorkerStatus` - worker 的状态
-- `workerTerminate: (status?: WebWorkerStatus) => void` - 终止 worker 的函数
+- `workerFn: (...args: Parameters<T>) => Promise<ReturnType<T>>` - 执行 worker 函数。
+- `workerStatus: WebWorkerStatus` - 当前状态枚举值。
+- `workerTerminate: (status?: WebWorkerStatus) => void` - 终止当前 worker 并设置状态。
+
+`WorkerStatusType` 导出值包括 `SUCCESS = 0`、`ERROR = 1`、`TIMEOUT = 2`、`RUNNING = 3` 和 `PENDING = 4`。
+
+### 进度和自定义消息
+
+worker 全局作用域会作为最后一个参数自动注入。调用 `workerFn` 时不需要传入它。
+
+```tsx
+import { useWebWorkerFn } from '@atom-universe/use-web-worker';
+
+function compute(total: number, workerContext: Worker) {
+  workerContext.postMessage(['PROGRESS', { percent: 50 }]);
+  return total * 2;
+}
+
+function App() {
+  const [workerFn] = useWebWorkerFn(compute, {
+    onMessage: message => {
+      if (message.type === 'PROGRESS') {
+        console.log(message.data.percent);
+      }
+    },
+  });
+
+  workerFn(21);
+}
+```
 
 ### useWebWorker
 
-用于更直接控制 Web Worker 的 Hook。
+`useWebWorker` 是较早的直接 worker 控制 hook。新的函数式场景建议优先使用 `useWebWorkerFn`。
 
 ```tsx
-const [data, post, terminate, status] = useWebWorker(
-  script: string | URL,
-  options?: UseWebWorkerOptions
+const [data, post, terminate, worker, isRunning] = useWebWorker<Data>(
+  urlOrFactoryOrWorker,
+  workerOptions
 );
 ```
 
+第一个参数可以是 worker 脚本 URL、`() => Worker` 工厂函数，或已有的 `Worker` 实例。
+
+## Benchmark
+
+仓库包含一个可复现 benchmark，用于对比 CPU 任务在主线程和 worker 线程中的响应性：
+
+```bash
+pnpm benchmark
+```
+
+脚本会写入 `BENCHMARK.md`，并更新官网使用的数据文件。
+
 ## 贡献
 
-欢迎贡献！请随时提交 Pull Request。
+欢迎贡献，请随时提交 Pull Request。
 
 ## 许可证
 
