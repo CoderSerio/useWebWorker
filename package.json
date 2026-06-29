@@ -9,6 +9,7 @@
     "test:core": "cd packages/core && pnpm test",
     "lint:core": "cd packages/core && pnpm lint",
     "dev:example": "cd packages/core && pnpm build && cd ../../packages/examples && pnpm dev",
+    "benchmark": "node scripts/benchmark-worker-overhead.mjs",
     "sync:scripts": "node scripts/sync-scripts.js",
     "prepare": "husky install",
     "lint": "pnpm -r run lint",

@@ -1,0 +1,38 @@
+{
+  "generatedAt": "2026-06-29T21:58:31.457Z",
+  "environment": {
+    "runtime": "Node v22.22.0",
+    "platform": "darwin arm64",
+    "cpu": "local machine"
+  },
+  "workload": {
+    "name": "Mandelbrot-style CPU workload",
+    "iterations": 3,
+    "size": 520,
+    "maxIterations": 180
+  },
+  "summary": {
+    "mainThreadDurationMs": 188.22,
+    "workerDurationMs": 195.94,
+    "mainThreadMaxTimerGapMs": 193.99,
+    "workerMaxTimerGapMs": 17.31,
+    "mainThreadMissedFramesAt60hz": 11,
+    "workerMissedFramesAt60hz": 0,
+    "blockingReductionPercent": 91.08,
+    "checksumMatched": true
+  },
+  "runs": {
+    "mainThread": {
+      "durationMs": 188.22258399999998,
+      "maxTimerGapMs": 193.99,
+      "missedFramesAt60hz": 11,
+      "checksum": 85875360
+    },
+    "workerThread": {
+      "durationMs": 195.938084,
+      "maxTimerGapMs": 17.31,
+      "missedFramesAt60hz": 0,
+      "checksum": 85875360
+    }
+  }
+}
