@@ -18,9 +18,9 @@
     "clipboard-js": "^0.3.6",
     "framer-motion": "^12.23.9",
     "gsap": "^3.13.0",
-    "next": "15.4.4",
-    "react": "19.1.0",
-    "react-dom": "19.1.0",
+    "next": "15.5.18",
+    "react": "19.1.7",
+    "react-dom": "19.1.7",
     "react-icons": "^4.12.0",
     "react-syntax-highlighter": "^15.6.1",
     "three": "^0.178.0"
@@ -33,7 +33,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
-    "eslint-config-next": "15.4.4",
+    "eslint-config-next": "15.5.18",
     "tailwindcss": "^4",
     "typescript": "^5"
   }
